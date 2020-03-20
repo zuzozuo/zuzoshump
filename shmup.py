@@ -19,13 +19,22 @@ BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 BACKGROUND_C = (255, 255, 204)
 
-
+# --------------------------------------------------------------
 pygame.init() #initializes pygame
 pygame.mixer.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT)) #creates window
 pygame.display.set_caption("Shmup zuzogame")
 clock = pygame.time.Clock()
 
+#-----------------------------------------------------
+#Load all game graphics
+#background = pygame.image.load(path.join(img_dir, "background.png")).convert()
+ #background_rect = backgrounf.get_rect()
+
+player_img = pygame.image.load(path.join(img_dir, "Cat.png")).convert()
+enemy_img = pygame.image.load(path.join(img_dir, "enemy.png")).convert()
+bullet_img = pygame.image.load(path.join(img_dir, "bullet.png")).convert()
+player_dead_img = pygame.image.load(path.join(img_dir, "Cat_dead.png")).convert()
 
 #------------------------------
 
@@ -36,6 +45,8 @@ class Player(pygame.sprite.Sprite):
         self.transColor = player_img.get_at((0,0))
         self.image.set_colorkey(self.transColor)
         self.rect = self.image.get_rect()
+        self.radius = 29
+       # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.centerx = (int)(WIDTH / 2)
         self.rect.bottom = HEIGHT - 10
         self.speedx = 0
@@ -75,22 +86,47 @@ class Player(pygame.sprite.Sprite):
             bullet = Bullet(self.rect.centerx, self.rect.top)
             all_sprites.add(bullet)
             bullets.add(bullet)
+    
+    def is_dead(self):
+        self.image = pygame.transform.scale(player_dead_img, (70, 60))
+        self.transColor = player_dead_img.get_at((0,0))
+        self.image.set_colorkey(self.transColor)
+        
 
 #----------------------------------------------
 
 class Mob(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(enemy_img, (40, 50))
+        self.image_original = pygame.transform.scale(enemy_img, (40, 50))
+        self.image = self.image_original.copy() #copy of original one
         self.transColor = enemy_img.get_at((0,0))
-        self.image.set_colorkey(self.transColor)
-        self.rect = self.image.get_rect()
+        self.image_original.set_colorkey(self.transColor)
+        #self.radius = 20
+        self.rect = self.image_original.get_rect()
         self.rect.x = random.randrange(WIDTH - self.rect.width)
         self.rect.y = random.randrange(-100, -40)
         self.speedy = random.randrange(1, 6)
         self.speedx = random.randrange(-2,2)
+        self.rotation = 0
+        self.rotation_speed = random.randrange(-4, 4)
+        self.last_update = pygame.time.get_ticks() #how many ticks its been since the clock started
+
+    def rotate(self):
+        now = pygame.time.get_ticks()        
+
+        if now  - self.last_update > 50:
+            self.last_update = now
+            self.rotation = (self.rotation + self.rotation_speed) % 360 #we don't want to have bigger number than 360
+            new_image= pygame.transform.rotate(self.image_original, self.rotation)
+            old_center = self.rect.center
+            self.image = new_image
+            self.rect = self.image.get_rect()
+            self.rect.center = old_center
+
 
     def update(self):
+        self.rotate()
         self.rect.y += self.speedy
         self.rect.x += self.speedx
         if self.rect.top > HEIGHT + 10 or self.rect.left < -25 or self.rect.right > WIDTH + 20:
@@ -98,8 +134,8 @@ class Mob(pygame.sprite.Sprite):
             self.rect.y = random.randrange(-100, -40)
             self.speedy = random.randrange(1, 6)
 
-#-----------------------------------------
-#        
+#----------------------------------------------------
+       
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -107,6 +143,7 @@ class Bullet(pygame.sprite.Sprite):
         self.transColor = bullet_img.get_at((0,0))
         self.image.set_colorkey(self.transColor)
         self.rect = self.image.get_rect()
+        self.radius = 15
         self.rect.bottom = y
         self.rect.centerx = x
         self.speedy = -10
@@ -117,17 +154,6 @@ class Bullet(pygame.sprite.Sprite):
         #kill if it moves off the top of the screen
         if self.rect.bottom < 0:
             self.kill() #command that deletes sprites
-
-#-----------------------------------------------------
-#Load all game graphics
-#background = pygame.image.load(path.join(img_dir, "background.png")).convert()
- #background_rect = backgrounf.get_rect()
-
-player_img = pygame.image.load(path.join(img_dir, "Cat.png")).convert()
-enemy_img = pygame.image.load(path.join(img_dir, "enemy.png")).convert()
-bullet_img = pygame.image.load(path.join(img_dir, "bullet.png")).convert()
-
-
 
 #-------------------------------------------------
 
@@ -170,9 +196,10 @@ while running:
         mobs.add(enemy)
     
     #check if a mob hit a player
-    hits = pygame.sprite.spritecollide(player, mobs, False) #this is a list
+    hits = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle) #this is a list
     if hits:
         running = False
+        player.is_dead()
 
     #Draw / render
     screen.fill(BACKGROUND_C)
