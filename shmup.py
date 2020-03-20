@@ -5,6 +5,8 @@ import random
 from os import path
 
 img_dir = path.join(path.dirname(__file__), 'img')
+font_name = pygame.font.match_font('tahoma')
+score = 0
 
 WIDTH = 480
 HEIGHT = 600
@@ -18,6 +20,7 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
 BACKGROUND_C = (255, 255, 204)
+FONT_C = (96, 19, 0)
 
 # --------------------------------------------------------------
 pygame.init() #initializes pygame
@@ -35,8 +38,16 @@ player_img = pygame.image.load(path.join(img_dir, "Cat.png")).convert()
 enemy_img = pygame.image.load(path.join(img_dir, "enemy.png")).convert()
 bullet_img = pygame.image.load(path.join(img_dir, "bullet.png")).convert()
 player_dead_img = pygame.image.load(path.join(img_dir, "Cat_dead.png")).convert()
+#---------------------------------------
 
-#------------------------------
+def draw_text(surface, text, size, x, y):
+    font = pygame.font.Font(font_name, size) #font object that can create text
+    text_surface = font.render(text, True, FONT_C)
+    text_rect = text_surface.get_rect()
+    text_rect.midtop = (x, y)
+    surface.blit(text_surface, text_rect)
+    
+#---------------------------------------
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -45,7 +56,7 @@ class Player(pygame.sprite.Sprite):
         self.transColor = player_img.get_at((0,0))
         self.image.set_colorkey(self.transColor)
         self.rect = self.image.get_rect()
-        self.radius = 29
+        self.radius = (int)(self.rect.width * .85 / 2)
        # pygame.draw.circle(self.image, RED, self.rect.center, self.radius)
         self.rect.centerx = (int)(WIDTH / 2)
         self.rect.bottom = HEIGHT - 10
@@ -191,6 +202,7 @@ while running:
 
     #print(hits)
     for hit in hits:
+        score = score + 1
         enemy = Mob()
         all_sprites.add(enemy)
         mobs.add(enemy)
@@ -205,6 +217,7 @@ while running:
     screen.fill(BACKGROUND_C)
     #screen.blit(background, background_rect)
     all_sprites.draw(screen)
+    draw_text(screen, str(score), 18, WIDTH / 2, 10)
     pygame.display.flip() # *after* drawing everything flip the display *)
 
 pygame.quit()
